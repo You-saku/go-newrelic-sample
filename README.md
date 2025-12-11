@@ -1,0 +1,2 @@
+# go-newrelic-sample
+
