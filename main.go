@@ -52,10 +52,11 @@ func main() {
 	if err != nil {
 		log.Println("Error loading .env file")
 	}
+	appName := os.Getenv("NEW_RELIC_APP_NAME")
 	licenseKey := os.Getenv("NEW_RELIC_LICENSE_KEY")
 
 	app, err = newrelic.NewApplication(
-		newrelic.ConfigAppName("go-newrelic-sample"),
+		newrelic.ConfigAppName(appName),
 		newrelic.ConfigLicense(licenseKey),
 		newrelic.ConfigAppLogForwardingEnabled(true),
 	)
