@@ -1,2 +1,2 @@
 # go-newrelic-sample
-NewRelicを学ぼう
+GoでNewRelicを学ぼう
