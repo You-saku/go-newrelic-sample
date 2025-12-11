@@ -13,7 +13,23 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
+var app *newrelic.Application
+
+func nonWebTransaction() {
+	// 自分でトランザクションを開始する場合
+	txn := app.StartTransaction("nonWebTransaction")
+	defer txn.End()
+
+	sum := 0
+	for i := 1; i <= 100; i++ {
+		sum += i
+	}
+	fmt.Printf("Sum of numbers from 1 to 100 is: %d\n", sum)
+	logrus.Info("Hello Non-Web Transaction Info !!")
+}
+
 func sampleHandler(w http.ResponseWriter, r *http.Request) {
+	nonWebTransaction()
 	fmt.Fprintf(w, "Hello golang !!")
 }
 
@@ -30,13 +46,15 @@ func newRelicSampleHandler2(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	err := godotenv.Load()
+	var err error
+
+	err = godotenv.Load()
 	if err != nil {
 		log.Println("Error loading .env file")
 	}
 	licenseKey := os.Getenv("NEW_RELIC_LICENSE_KEY")
 
-	app, err := newrelic.NewApplication(
+	app, err = newrelic.NewApplication(
 		newrelic.ConfigAppName("go-newrelic-sample"),
 		newrelic.ConfigLicense(licenseKey),
 		newrelic.ConfigAppLogForwardingEnabled(true),
@@ -46,17 +64,14 @@ func main() {
 		return
 	}
 
-	txn := app.StartTransaction("Transaction Test")
-	defer txn.End()
-
 	nrlogrusFormatter := nrlogrus.NewFormatter(app, &logrus.JSONFormatter{})
 	// logrusでログを出力する箇所がhandlerの関数なのでlogrus.New()は使わない
 	logrus.SetLevel(logrus.DebugLevel)     // Set log level to Debug
 	logrus.SetFormatter(nrlogrusFormatter) // Set New Relic logrus formatter
 
 	http.HandleFunc("/", sampleHandler)
-	http.HandleFunc(newrelic.WrapHandleFunc(app, "/newrelic", newRelicSampleHandler))
-	http.HandleFunc(newrelic.WrapHandleFunc(app, "/newrelic2", newRelicSampleHandler2))
+	http.HandleFunc(newrelic.WrapHandleFunc(app, "/newrelic", newRelicSampleHandler))   // trace transaction
+	http.HandleFunc(newrelic.WrapHandleFunc(app, "/newrelic2", newRelicSampleHandler2)) // trace transaction
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Println("HTTP server failed:", err)
